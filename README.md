@@ -114,17 +114,17 @@ graph TD
 
 ![Seaport](Seaport.order.drawio.svg)
 
-### 1. offer 和 consideration
+### 1. 出价/喊单 offer 和 对价/接单 consideration
 
-目前大多数 NFT 市场只允许一方同意提供 NFT，另一方同意提供支付代币的 listing。Seaport 采取了一种不同的方法：`offerer` 可以同意提供一定数量的 ETH/ERC20/ERC721/ERC1155 项目--这就是 `offer`。为了使该`offer`被接受，`offerer`必须收到一定数量的物品，这就是 `consideration`。
+目前大多数 NFT 市场只允许一方同意提供 NFT，另一方同意提供支付代币的 listing。Seaport 采取了一种不同的方法：`offerer`/`maker` 可以同意提供一定数量的 ETH/ERC20/ERC721/ERC1155 项目--这就是 `offer`。为了使该`offer`被接受，`offerer`必须收到一定数量的物品（也可以是ERC20/ERC721/ERC1155 ），这就是 `consideration`。`fulfiller`/`taker` 按`consideration` 清单给 `offerer`。
 
-也就是说 Seaport 中没有明确的买家和卖家的概念了。
+也就是说 Seaport 中没有明确的买家和卖家的概念了，采用出价方offerer和对价方fulfiller来更精准的描叙交易行为，比如下面场景：
 
 1. 当 `offer` 是 ERC721/ERC1155 的时候，`offerer` 就是卖家，卖出 ERC721/ERC1155 来换取 ETH/ERC20。
 2. 当 `offer` 是 ETH/ERC20 的时候，`offerer` 就是买家，买入 ERC721/ERC1155，支付 ETH/ERC20。
 3. 当 `offer` 和 `consideration` 都是 是 ERC721/ERC1155 的时候就是 NFT 的互换了，这种情况下就无所谓买家和卖家了。
 
-需要注意的是 **ETH/ERC20 在 Seaport 中充当的是货币（currency），ERC721/ERC1155 充当的是商品。** 这一点很重要。
+需要注意的是 **ETH/ERC20 在 Seaport 中充当的是货币（currency），ERC721/ERC1155 充当的是商品。** 只是opensea平台是卖nft所以才这样定义，`Seaport`原意是都支持的，这一点很重要。
 
 还有一点需要注意的是 `order` 中 `offer` 和 `consideration` 都是数组类型。数组的元素个数可以是任意数量的。也就是说 订单中 `offer` 或者 `consideration` 中的一个可以是空的。
 
@@ -187,7 +187,7 @@ enum ItemType {
 
 #### 3) identifierOrCriteria
 
-对于 ETH/ERC20 类型的 token，这个属性会被忽略。
+对于 ETH/ERC20 类型的 token，这个属性会被忽略，默认值为0。
 
 对于 ERC721/ERC1155 类型的项目，表示 token id。
 
@@ -201,7 +201,7 @@ enum ItemType {
 
 #### 4) startAmount 和 endAmount
 
-普通情况下这两个值是相同的。表示 token 的数量。
+普通情况下这两个值是相同的。表示 token 的数量， 如果ERC721 这两个值都是1。
 
 在进行荷兰式拍卖和英格兰式拍卖的时候，这两个值是不同的。然后订单根据当前这个两个属性并结合当前区块时间以及订单的 startTime、endTime 来确定当前的价格。
 
@@ -322,7 +322,7 @@ zone 是可选的辅助帐户，一般情况下是一个合约。
 4. fulfillAvailableOrders               => 0xed98a574
 5. fulfillAvailableAdvancedOrders       => 0x87201b41
 
-调用这些方法的时候，第二个隐含订单将被构建，调用者为 `offerer`，将要履行的订单的 `offer` 为 `consideration`，将要履行订单的 `consideration` 为 `offer`。将要履行订单的 `offer` 项目将从订单的 `offerer` 转移到履行者，然后所有 `consideration` 项目将从履行者转移到指定的接受者。
+调用这些方法前需要`offerer`先提交订单，调用者为 `fulfiller`，通过`Seaport`合约 通过上面方法执行订单， 把订单的 `offer`的token从`offerer`转给`fulfiller`, `consideration`的token从`fulfiller`转给`offerer`。
 
 目前大部分成交都调用的这些方法。
 
@@ -385,7 +385,7 @@ AdvancedOrder 相较于 Order 多了 `numerator`（分子）和 `denominator`（
 
 1. 首先一个 `offerer` 拥有某个 collection 的三个 ERC721 token。tokend id 分别是 1、2、6。
 
-2. `offerer` 挂出他的 token。挂单的时候要生成一个 Merkle Tree。Data1 = 1， Data1 = 2， Data1 = 6。最终得到 Root 的值。然后生成订单信息，`offer` 的 `identifierOrCriteria` = `Root`。
+2. `offerer` 挂出他的 token。挂单的时候要生成一个 Merkle Tree。Data1 = 1， Data2 = 2， Data3 = 6。最终得到 Root 的值。然后生成订单信息，`offer` 的 `identifierOrCriteria` = `Root`。
 3. 某个买家想要购买 tokend id 为 1 的 token。需要调用 Advanced 方法。
 4. Advanced 方法需要传入 `criteriaResolvers` 参数。具体类型如下
 
@@ -532,7 +532,7 @@ struct ConduitProperties {
 
  `createConduit()` 是创建 Conduit 的方法。
 
-`conduitKey` 是 bytes32 类型的数据。前20个字节是该方法的调用者的地址。后面的字节补 0。也就是说 `conduitKey` 其实就是由创建 Conduit 的账户地址转换而来的。
+`conduitKey` 是 bytes32 类型的数据。前20个字节是该方法的调用者的地址。后面的字节补全任意16进制数可以是全0。也就是说 `conduitKey` 其实就是由创建 Conduit 的账户地址转换而来的。
 
 `initialOwner` 是要创建的 Conduit 的 Owner。不能为空。
 
