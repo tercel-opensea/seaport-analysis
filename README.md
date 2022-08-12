@@ -2290,6 +2290,8 @@ fulfillments(
   "extraData": "0x"
 }
 ```
+match order最重要的是买卖单的匹配，供需token相同且价格相同，如
+订单1匹配订单而是因为，订单1的offer卖出的token是订单2的offer买入token一样，且订单1的consideration列表累计金额等于订单2的offer金额
 
 fulfillments 是 具体 每个订单 offer 中的项目与另外一个订单中具体哪一个项目进行匹配的信息。
 
