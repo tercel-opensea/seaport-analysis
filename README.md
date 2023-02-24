@@ -608,7 +608,7 @@ function createConduit(bytes32 conduitKey, address initialOwner)
 #### updateChannel
 
 通过调用 `updateChannel()` 来管理 Conduit 的 channel。需要注意的是虽然 Conduit 合约有 `updateChannel()` 方法，但是 Conduit 的 channel 必须由 ConduitController 来管理，不能直接调用。
-
+channel 就是可以调用 condut合约的用户，比如opensea，channel就有seaport合约地址
 ```solidity
 // ConduitController.sol => updateChannel()
 
